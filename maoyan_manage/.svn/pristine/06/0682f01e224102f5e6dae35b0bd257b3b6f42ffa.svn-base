@@ -1,0 +1,82 @@
+import axios from 'axios';
+const IP = 'http://127.0.0.1:3000';
+export default {
+  state: {
+    movies: [], //存放电影
+    curpage: 1,
+    rows: 10,
+    maxpage: 1,
+    total: 1000,
+    addShow: []
+  },
+  mutations: {
+    movie(state, obj) {
+      //页数！
+      state.movies = obj.data;
+      state.curpage = obj.data.curpage;
+      state.maxpage = obj.data.maxpage;
+       state.total=obj.data.total
+    },
+    //添加的渲染
+    addMovies(state, obj) {
+      state.addShow = obj.data;
+      state.curpage = obj.data.curpage;
+      state.maxpage = obj.data.maxpage;
+      state.total = obj.data.total;
+    },
+    //搜索
+    searchMovie(state, obj) {
+      let data = state.movies.filter(i =>   !!~i.name.indexOf(obj.value));
+      console.log(data)
+      state.movies = data;
+    }
+  },
+  actions: {
+    //获取渲染所有电影
+    playing_takeData(context, obj) {
+      axios.get(IP + '/playing/get_Movies', {
+          // params: {
+          //   page: obj.page,
+          //   rows: obj.rows
+          // }
+          
+        })
+        .then(data => {
+          console.log(data);
+          data.data = data.data.filter((elem,index,movies) => index === movies.findIndex(child => child.name === elem.name))
+          console.log(data.data);
+          context.commit('movie', data);
+
+        });
+      //添加电影渲染
+      axios.get(IP + '/playing/showMovie', { params: {} }).then(data => {
+        data.data = data.data.filter((elem,index,movies) => index === movies.findIndex(child => child.name === elem.name))
+        context.commit('addMovies', data);
+      });
+    },
+
+    //删除
+    delWindows(context, obj) {
+      axios.post(IP + '/playing/del', { _id: obj._id }).then(data => {
+        // console.log(data)
+        // 抓第一个调用，刷新
+        context.dispatch({
+          type: "playing_takeData",
+          page: context.state.curpage,
+          rows: context.state.rows
+        });
+      });
+    },
+    //添加
+   addmovie(context,obj){
+    axios.post(IP+'/playing/add',{movies:obj.data}).then((data)=>{
+        context.dispatch(
+            {
+                type:"playing_takeData",
+                page:1,
+                row:context.state.rows
+            })    
+    })
+   }
+  }
+};

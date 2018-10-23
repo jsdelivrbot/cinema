@@ -1,0 +1,85 @@
+import axios from 'axios';
+const IP = 'http://127.0.0.1:3000';
+export default {
+  state: {
+    movies: [], //存放电影
+    curpage: 1,
+    rows: 5,
+    maxpage: 0,
+    addShow: [],
+  },
+  mutations: {
+    movie(state, obj) {
+      //页数！
+      state.movies = obj.data;
+      state.curpage = obj.data.curpage;
+      state.maxpage = obj.data.maxpage;
+       state.total=obj.data.total
+    },
+    //添加的渲染
+    addMovies(state, obj) {
+      state.addShow = obj.data;
+      state.curpage = obj.data.curpage;
+      state.maxpage = obj.data.maxpage;
+    },
+    //搜索
+    searchMovie(state, obj) {
+      let data = state.movies.filter(i =>   !!~i.name.indexOf(obj.value));
+      console.log(data)
+      state.movies = data;
+    }
+  },
+  getter:{
+     addShow(state){
+       console.log(3223213123213)
+       let arr=[...state.movies]
+       var moviebox=[]
+       for (var i = 0; i < arr.length; i++) {
+        moviebox.push(arr[i]._id);
+    }
+    return arr
+     }
+  },
+  actions: {
+    //获取渲染所有电影
+    playing_takeData(context, obj) {
+      axios.get(IP + '/playing/get_Movies', {
+            page: obj.page,
+            rows: obj.rows
+        })
+        .then(data => {
+          //去重页面上
+          data.data = data.data.filter((elem,index,movies) => index === movies.findIndex(child => child.name === elem.name))
+          context.commit('movie', data);
+        });
+      //添加电影渲染
+      axios.get(IP + '/playing/showMovie', { params: {} }).then(data => {
+        context.commit('addMovies', data);
+      });
+    },
+
+    //删除
+    delWindows(context, obj) {
+      axios.post(IP + '/playing/del', { _id: obj._id }).then(data => {
+        // 抓第一个调用，刷新
+        context.dispatch({
+          type: "playing_takeData",
+          page: context.state.curpage,
+          rows: context.state.rows
+        });
+      });
+    },
+    //添加
+   addmovie(context,obj){
+    axios.post(IP+'/playing/add',{movies:[obj.data]}).then((data)=>{
+      // data.data = data.data.filter((elem,index,movies) => index === movies.findIndex(child => child.name === elem.name))
+        context.dispatch(
+            {
+                type:"playing_takeData",
+                page:1,
+                row:context.state.rows
+            })    
+    })
+   }
+  }
+};

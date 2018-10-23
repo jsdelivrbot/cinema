@@ -1,0 +1,292 @@
+<template>
+  <div>
+    <div>
+      <el-input placeholder="请输入电影名"
+                v-model="search_name"
+                class="input-with-select"
+                style="width:400px;">
+        <el-button slot="append"
+                   icon="el-icon-search"
+                   @click="search_btn"></el-button>
+      </el-input>
+      <el-button plain
+                 @click="clear_btn(search_name)">刷新</el-button>
+      <el-button plain
+                 @click="dialogVisible = true">增加</el-button>
+    </div>
+
+    <!-- 添加窗口 -->
+    <el-dialog title="添加"
+               ref="multipleTable"
+               :visible.sync="dialogVisible"
+               width=""
+               @selection-change="handleSelectionChange">
+      <template>
+        <!-- 多选框（在窗口） -->
+        <el-table ref="multipleTable"
+                  :data="addShow"
+                  tooltip-effect="dark"
+                  style="width: 100%"
+                  @selection-change="handleSelectionChange">
+          <el-table-column type="selection"
+                           @click='toggleSelection()'
+                           width="55">
+          </el-table-column>
+          <el-table-column prop="name"
+                           label="电影名"
+                           width="120">
+          </el-table-column>
+          <el-table-column prop="en_name"
+                           label="英文名"
+                           show-overflow-tooltip>
+          </el-table-column>
+          <el-table-column prop="movie_type"
+                           label="类型"
+                           width='120'>
+          </el-table-column>
+          <el-table-column prop="movie_uptime"
+                           label="上映时间"
+                           width='120'>
+          </el-table-column>
+          <el-table-column prop="movie_time"
+                           label="影片时长"
+                           width='120'>
+          </el-table-column>
+          <el-table-column prop="movie_soc"
+                           label="评分"
+                           width='100%'>
+          </el-table-column>
+
+        </el-table>
+        <!-- 翻页（在窗口） -->
+        <el-pagination background
+                       layout="prev, pager, next"
+                       :total= maxpage*10
+                       @prev-click='prePageClick'
+                       @next-click="nextPageClick"
+                       @current-change="handleCurrentChange">
+        </el-pagination>
+      </template>
+      <span slot="footer"
+            class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary"
+                   @click="dialogVisibles">确 定</el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 删除对话框 -->
+    <el-dialog title="删除"
+               :visible.sync="delWindow"
+               width="30%">
+      <span>你确定这么做？</span>
+      <span slot="footer"
+            class="dialog-footer">
+        <el-button @click="delWindow = false">取 消</el-button>
+        <el-button type="primary"
+                   @click="delWindows">确 定</el-button>
+      </span>
+    </el-dialog>
+    <template>
+      <el-table :data="movies"
+                style="width: 100%">
+        <el-table-column prop="name"
+                         label="电影名"
+                         width="120">
+        </el-table-column>
+        <el-table-column prop="en_name"
+                         label="英文名"
+                         width="120">
+        </el-table-column>
+        <el-table-column prop="movie_type"
+                         label="类型"
+                         width='120'>
+        </el-table-column>
+        <el-table-column prop="movie_uptime"
+                         label="上映时间"
+                         width='120'>
+        </el-table-column>
+        <el-table-column prop="movie_time"
+                         label="影片时长"
+                         width='120'>
+        </el-table-column>
+        <el-table-column prop="movie_soc"
+                         label="评分"
+                         width='100%'>
+        </el-table-column>
+        <el-table-column label="操作">
+          <template slot-scope="scope">
+
+            <el-button @click.native.prevent="handleDelete(scope.$index, scope.row)"
+                       type="text"
+                       size="small">
+              移除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </template>
+     <!-- 翻页 -->
+          <el-pagination background
+                       layout="prev, pager, next"
+                       :total='maxpage*10'
+                       :page-count=5
+                       @prev-click='prePageClick'
+                       @next-click="nextPageClick"
+                       @current-change="handleCurrentChange">
+        </el-pagination>
+
+  </div>
+</template>
+<script>
+const rows = 5;
+const IP = "http://127.0.0.1:3000"
+import axios from 'axios'
+export default {
+    data(){
+         return {
+      dialogVisible: false,
+      decDialogVisible: false,
+      delWindow: false,
+      search_name: '',
+      // data:[]
+    }
+    },
+    methods:{
+          toggleSelection(rows) {
+        if (rows) {
+          rows.forEach(row => {
+            this.$refs.multipleTable.toggleRowSelection(row);
+          });
+        } else {
+          this.$refs.multipleTable.clearSelection();
+        }
+      },
+      //单选多选
+        toggleSelection(rows) {
+        if (rows) {
+          rows.forEach(row => {
+            this.$refs.multipleTable.toggleRowSelection(row);
+          });
+        } else {
+          this.$refs.multipleTable.clearSelection();
+        }
+      },
+      handleSelectionChange(val) {
+        this.multipleSelection = val;
+        console.log(this.multipleSelection)
+      
+    },
+        //添加
+        dialogVisibles(){
+            this.$store.dispatch({
+           type: 'addmovie',
+           data: this.multipleSelection.map(elem => elem._id)
+      })
+            console.log('添加')
+            this.dialogVisible=false
+
+        },
+        //搜索
+        search_btn(){
+        if(this.search_name===''){
+            this.refresh(1,5)
+        }
+          let value=this.search_name;
+          this.$store.commit({
+            type:'searchMovie',
+            value
+          });
+          // this.search_name=''
+        
+        },
+        //清空
+        clear_btn(){
+         this.refresh(1,5)
+          this.search_name=''
+        },
+        //
+        selection(index,row){
+             this.$store.dispatch({
+        type: 'addmovie',
+        _id: this._id // 获取一个，进行删除，
+      })
+      console.log(this._id)
+         console.log('多选框')
+        },
+    //上一页
+    prePageClick(){
+    if (this.curpage - 1 >= 0) {
+        console.log(this.curpage);
+        this.refresh(this.curpage - 1, 10);
+      }
+    },
+     //下一页
+    nextPageClick() {
+      if (this.curpage + 1 <= this.maxpage) {
+        console.log(this.curpage);
+        this.refresh(this.curpage + 1, 10);
+      }
+    },
+        //跳转到当前页
+    handleCurrentChange(val) {
+      console.log(`当前页: ${val}`);
+      this.refresh(val, 10);
+    },
+
+    
+    // 点击删除事件
+    handleDelete (index, row) {
+      this.delWindow = true
+      this._id = row._id
+      console.log(this._id)
+    },
+       // 删除对话框
+    delWindows () {
+      this.$store.dispatch({
+        type: 'delWindows',
+        _id: this._id // 获取一个，进行删除，
+      })
+      this.delWindow = false
+    },
+    //刷新页面
+       refresh(page,rows){
+        this.$store.dispatch({
+          type:'playing_takeData',
+          page,
+          rows
+      })
+    }
+    },
+      computed: {
+    //获取电影的数据
+    movies () {
+        return this.$store.state.playing.movies
+    },
+    // //获取添加的电影
+    addShow(){
+       return this.$store.state.playing.addShow
+       
+    },
+    curpage () {
+      return this.$store.state.playing.curpage
+    },
+    maxpage () {
+      return this.$store.state.playing.maxpage
+    },
+    total(){
+     return this.$store.state.playing.total
+    }
+
+  },
+  created(){
+      this.refresh(1,5)
+  }
+};
+</script>
+<style scoped>
+.el-input {
+  width: 200px;
+}
+</style>
+
